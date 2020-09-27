@@ -23,7 +23,7 @@ let config = {
     privatekey: null
   },
   ssh: {
-    host: null,
+    host: "localhost",
     port: 22,
     term: 'xterm-color',
     readyTimeout: 20000,
@@ -115,7 +115,10 @@ var server = require('http').Server(app)
 var myutil = require('./util')
 myutil.setDefaultCredentials(config.user.name, config.user.password, config.user.privatekey)
 var validator = require('validator')
-var io = require('socket.io')(server, { serveClient: false, path: '/ssh/socket.io' })
+var io = require('socket.io')(server, {
+  serveClient: false,
+  path: '/ssh/socket.io'
+})
 var socket = require('./socket')
 var expressOptions = require('./expressOptions')
 var favicon = require('serve-favicon')
@@ -131,7 +134,7 @@ app.disable('x-powered-by')
 app.use('/ssh', express.static(publicPath, expressOptions))
 
 // favicon from root if being pre-fetched by browser to prevent a 404
-app.use(favicon(path.join(publicPath,'favicon.ico')));
+app.use(favicon(path.join(publicPath, 'favicon.ico')));
 
 app.get('/ssh/reauth', function (req, res, next) {
   var r = req.headers.referer || '/'
@@ -139,15 +142,15 @@ app.get('/ssh/reauth', function (req, res, next) {
 })
 
 // eslint-disable-next-line complexity
-app.get('/ssh/host/:host?', function (req, res, next) {
+app.get('/', function (req, res, next) {
   res.sendFile(path.join(path.join(publicPath, 'client.htm')))
   // capture, assign, and validated variables
   req.session.ssh = {
-    host: config.ssh.host || (validator.isIP(req.params.host + '') && req.params.host) ||
-      (validator.isFQDN(req.params.host) && req.params.host) ||
-      (/^(([a-z]|[A-Z]|[0-9]|[!^(){}\-_~])+)?\w$/.test(req.params.host) &&
-      req.params.host),
-    port: (validator.isInt(req.query.port + '', { min: 1, max: 65535 }) &&
+    host: config.ssh.host,
+    port: (validator.isInt(req.query.port + '', {
+        min: 1,
+        max: 65535
+      }) &&
       req.query.port) || config.ssh.port,
     localAddress: config.ssh.localAddress,
     localPort: config.ssh.localPort,
@@ -163,8 +166,14 @@ app.get('/ssh/host/:host?', function (req, res, next) {
       req.query.sshterm) || config.ssh.term,
     terminal: {
       cursorBlink: (validator.isBoolean(req.query.cursorBlink + '') ? myutil.parseBool(req.query.cursorBlink) : config.terminal.cursorBlink),
-      scrollback: (validator.isInt(req.query.scrollback + '', { min: 1, max: 200000 }) && req.query.scrollback) ? req.query.scrollback : config.terminal.scrollback,
-      tabStopWidth: (validator.isInt(req.query.tabStopWidth + '', { min: 1, max: 100 }) && req.query.tabStopWidth) ? req.query.tabStopWidth : config.terminal.tabStopWidth,
+      scrollback: (validator.isInt(req.query.scrollback + '', {
+        min: 1,
+        max: 200000
+      }) && req.query.scrollback) ? req.query.scrollback : config.terminal.scrollback,
+      tabStopWidth: (validator.isInt(req.query.tabStopWidth + '', {
+        min: 1,
+        max: 100
+      }) && req.query.tabStopWidth) ? req.query.tabStopWidth : config.terminal.tabStopWidth,
       bellStyle: ((req.query.bellStyle) && (['sound', 'none'].indexOf(req.query.bellStyle) > -1)) ? req.query.bellStyle : config.terminal.bellStyle
     },
     allowreplay: config.options.challengeButton || (validator.isBoolean(req.headers.allowreplay + '') ? myutil.parseBool(req.headers.allowreplay) : false),
@@ -174,7 +183,10 @@ app.get('/ssh/host/:host?', function (req, res, next) {
       client: config.serverlog.client || false,
       server: config.serverlog.server || false
     },
-    readyTimeout: (validator.isInt(req.query.readyTimeout + '', { min: 1, max: 300000 }) &&
+    readyTimeout: (validator.isInt(req.query.readyTimeout + '', {
+        min: 1,
+        max: 300000
+      }) &&
       req.query.readyTimeout) || config.ssh.readyTimeout
   }
   if (req.session.ssh.header.name) validator.escape(req.session.ssh.header.name)
@@ -194,8 +206,7 @@ app.use(function (err, req, res, next) {
 // socket.io
 // expose express session with socket.request.session
 io.use(function (socket, next) {
-  (socket.request.res) ? session(socket.request, socket.request.res, next)
-    : next(next)
+  (socket.request.res) ? session(socket.request, socket.request.res, next): next(next)
 })
 
 // bring up socket
@@ -206,7 +217,7 @@ var shutdownMode = false
 var shutdownInterval = 0
 var connectionCount = 0
 
-function safeShutdownGuard (req, res, next) {
+function safeShutdownGuard(req, res, next) {
   if (shutdownMode) res.status(503).end('Service unavailable: Server shutting down')
   else return next()
 }
@@ -228,8 +239,8 @@ signals.forEach(signal => process.on(signal, function () {
     var remainingSeconds = config.safeShutdownDuration
     shutdownMode = true
 
-    var message = (connectionCount === 1) ? ' client is still connected'
-      : ' clients are still connected'
+    var message = (connectionCount === 1) ? ' client is still connected' :
+      ' clients are still connected'
     console.error(connectionCount + message)
     console.error('Starting a ' + remainingSeconds + ' seconds countdown')
     console.error('Press Ctrl+C again to force quit')
@@ -245,7 +256,7 @@ signals.forEach(signal => process.on(signal, function () {
 }))
 
 // clean stop
-function stop (reason) {
+function stop(reason) {
   shutdownMode = false
   if (reason) console.log('Stopping: ' + reason)
   if (shutdownInterval) clearInterval(shutdownInterval)
@@ -253,4 +264,7 @@ function stop (reason) {
   server.close()
 }
 
-module.exports = { server: server, config: config }
+module.exports = {
+  server: server,
+  config: config
+}
